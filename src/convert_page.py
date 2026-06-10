@@ -9,22 +9,17 @@ Fandom Wiki 通用转换工具
 
 import sys
 import os
-import re
 import argparse
 import time
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from fandom_bot import FandomBot, protect_filenames, restore_filenames, verify_filenames_preserved
+from typing import Tuple, Optional, List
+
+from fandom_bot import FandomBot, verify_filenames_preserved, safe_error
 from batch_processor import BatchProcessor
 
-def convert_page(text, bot):
-    """转换单个页面的文本"""
-    text, protected = protect_filenames(text)
-    text = bot.cc.convert(text)
-    text = restore_filenames(text, protected)
-    return text
 
-def verify_conversion(original, new_content, page_name):
+def verify_conversion(original: str, new_content: str, page_name: str) -> bool:
     """验证转换结果"""
     
     print(f"\n📊 转换统计 - {page_name}")
@@ -46,7 +41,9 @@ def verify_conversion(original, new_content, page_name):
             print(f"    {err}")
         return False
 
-def convert_single_page(page_name, bot, dry_run=False, show_diff=False):
+
+def convert_single_page(page_name: str, bot: FandomBot, dry_run: bool = False,
+                        show_diff: bool = False) -> bool:
     """转换单个页面"""
     print(f"📄 转换页面: {page_name}")
     
@@ -56,7 +53,7 @@ def convert_single_page(page_name, bot, dry_run=False, show_diff=False):
         return False
     
     original = page.text()
-    new_content = convert_page(original, bot)
+    new_content = bot.convert_text(original)
     
     if original == new_content:
         print("ℹ️  页面无需修改")
@@ -88,10 +85,12 @@ def convert_single_page(page_name, bot, dry_run=False, show_diff=False):
         print(f"✅ 页面已保存")
         return True
     except Exception as e:
-        print(f"❌ 保存失败: {e}")
+        print(f"❌ 保存失败: {safe_error(e)}")
         return False
 
-def convert_page_with_subpages(page_name, bot, dry_run=False):
+
+def convert_page_with_subpages(page_name: str, bot: FandomBot,
+                               dry_run: bool = False) -> Tuple[bool, int, int, int]:
     """转换单个页面及其子页面"""
     print(f"\n📄 转换页面: {page_name}")
     
@@ -102,7 +101,7 @@ def convert_page_with_subpages(page_name, bot, dry_run=False):
     
     # 转换主页面
     original = page.text()
-    new_content = convert_page(original, bot)
+    new_content = bot.convert_text(original)
     
     converted = 0
     failed = 0
@@ -125,15 +124,20 @@ def convert_page_with_subpages(page_name, bot, dry_run=False):
         print("  ℹ️  无需修改")
         skipped += 1
     
-    # 处理子页面
+    # 获取子页面列表
     try:
         subpages = bot.get_subpages(page_name)
         print(f"  找到 {len(subpages)} 个子页面")
-        
-        for j, subpage in enumerate(subpages, 1):
-            print(f"  [{j}/{len(subpages)}] {subpage.name}")
+    except Exception as e:
+        print(f"  ⚠️  获取子页面失败: {safe_error(e)}")
+        return (failed == 0), converted, failed, skipped
+    
+    # 处理子页面
+    for j, subpage in enumerate(subpages, 1):
+        print(f"  [{j}/{len(subpages)}] {subpage.name}")
+        try:
             orig = subpage.text()
-            new = convert_page(orig, bot)
+            new = bot.convert_text(orig)
             
             if orig != new:
                 valid, errors = verify_filenames_preserved(orig, new)
@@ -151,19 +155,43 @@ def convert_page_with_subpages(page_name, bot, dry_run=False):
             else:
                 print("    ℹ️  无需修改")
                 skipped += 1
-            
-            if j < len(subpages):
-                time.sleep(0.3)
-    except Exception as e:
-        print(f"  ⚠️  获取子页面失败: {e}")
+        except Exception as e:
+            print(f"    ⚠️  编辑子页面失败: {safe_error(e)}")
+            failed += 1
+        
+        if j < len(subpages):
+            time.sleep(0.3)
     
     return (failed == 0), converted, failed, skipped
 
-def search_pages(bot: FandomBot, keyword: str, filter_pattern: str = None):
+
+def process_batch_page(name: str, bot: FandomBot,
+                       dry_run: bool = False) -> Tuple[Optional[bool], str]:
+    """批处理单个页面"""
+    try:
+        page = bot.get_page(name)
+        if not page.exists:
+            return None, f'ℹ️  页面不存在: {name}'
+        original = page.text()
+        new_content = bot.convert_text(original)
+        if original == new_content:
+            return None, 'ℹ️  无需修改'
+        valid, errors = verify_filenames_preserved(original, new_content)
+        if not valid:
+            return False, f'⚠️  文件名验证失败: {errors}'
+        if not dry_run:
+            bot.edit_page(page, new_content, summary="转换为简体中文")
+        return True, '✓ 已转换'
+    except Exception as e:
+        return False, f'❌ 失败: {safe_error(e)}'
+
+
+def search_pages(bot: FandomBot, keyword: str,
+                 filter_pattern: Optional[str] = None) -> List[str]:
     """搜索包含关键词的页面"""
     print(f"正在搜索: {keyword}")
     
-    pages = []
+    pages: List[str] = []
     
     try:
         for result in bot.site.search(keyword, namespace='0'):
@@ -177,10 +205,11 @@ def search_pages(bot: FandomBot, keyword: str, filter_pattern: str = None):
                 pages.append(page_name)
                 print(f"  找到: {page_name}")
     except Exception as e:
-        print(f"搜索出错: {e}")
+        print(f"搜索出错: {safe_error(e)}")
     
     print(f"\n共找到 {len(pages)} 个页面")
     return pages
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -240,11 +269,11 @@ def main():
         bot = FandomBot()
         print(f"✓ 已登录: {bot.site.username}\n")
     except Exception as e:
-        print(f"❌ 登录失败: {e}")
+        print(f"❌ 登录失败: {safe_error(e)}")
         sys.exit(1)
     
     # 搜索模式
-    page_names = None
+    page_names: Optional[List[str]] = None
     if args.search:
         pages = search_pages(bot, args.search, args.filter)
         if args.list:
@@ -261,11 +290,14 @@ def main():
                 with open(args.from_file, 'r', encoding='utf-8') as f:
                     page_names = [line.strip() for line in f if line.strip() and not line.startswith('#')]
             except Exception as e:
-                print(f"❌ 读取文件失败: {e}")
+                print(f"❌ 读取文件失败: {safe_error(e)}")
                 sys.exit(1)
         else:
             page_names = args.pages
     
+    # 类型收窄：此处 page_names 保证非 None（搜索/文件/命令行参数必有其一）
+    assert page_names is not None
+
     # 带子页面转换
     if args.with_subpages:
         print(f"=== 批量转换页面及子页面 ===")
@@ -298,7 +330,8 @@ def main():
         success = convert_single_page(page_names[0], bot, args.dry_run, args.show_diff)
     else:
         batch = BatchProcessor(bot, dry_run=args.dry_run, delay=0.5)
-        processor = lambda name, bot: (True, '✓ 已转换') if bot.convert_text(bot.get_page(name).text()) != bot.get_page(name).text() else (None, 'ℹ️  无需修改')
+        # 使用闭包捕获 dry_run，因为 BatchProcessor 不会在 processor 内处理 dry_run
+        processor = lambda name, bot_arg: process_batch_page(name, bot_arg, args.dry_run)
         success = batch.process_pages(page_names, processor, "批量转换页面")
     
     sys.exit(0 if success else 1)

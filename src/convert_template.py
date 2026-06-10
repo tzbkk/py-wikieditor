@@ -9,12 +9,14 @@ Fandom Wiki 模板转换工具
 
 import sys
 import os
-import re
 import argparse
 import time
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from fandom_bot import FandomBot, protect_filenames, restore_filenames, verify_filenames_preserved
+from typing import List, Optional, Any
+
+from fandom_bot import FandomBot, verify_filenames_preserved, safe_error
+
 
 VARIABLE_MAPPINGS = {
     '名稱': '名称',
@@ -40,14 +42,8 @@ VARIABLE_MAPPINGS = {
     '資料模板': '资料模板',
 }
 
-def convert_page(text, bot, include_doc=False):
-    """转换单个页面的文本"""
-    text, protected = protect_filenames(text)
-    text = bot.cc.convert(text)
-    text = restore_filenames(text, protected)
-    return text
 
-def verify_conversion(original, new_content, page_name):
+def verify_conversion(original: str, new_content: str, page_name: str) -> bool:
     """验证转换结果"""
     print(f"\n📊 转换统计 - {page_name}")
     
@@ -68,7 +64,8 @@ def verify_conversion(original, new_content, page_name):
             print(f"    {err}")
         return False
 
-def list_template_pages(template_name, bot):
+
+def list_template_pages(template_name: str, bot: FandomBot) -> List[Any]:
     """列出所有使用模板的页面"""
     print(f"📋 获取使用 {template_name} 的页面...")
     pages = list(bot.get_template_embedded_pages(template_name))
@@ -80,7 +77,9 @@ def list_template_pages(template_name, bot):
     
     return pages
 
-def test_single_page(page_name, template_name, bot, dry_run=False):
+
+def test_single_page(page_name: str, template_name: str, bot: FandomBot,
+                     dry_run: bool = False) -> bool:
     """测试模式：转换单个页面"""
     print(f"=== 测试模式 ===")
     print(f"页面: {page_name}")
@@ -92,7 +91,7 @@ def test_single_page(page_name, template_name, bot, dry_run=False):
         return False
     
     original = page.text()
-    new_content = convert_page(original, bot)
+    new_content = bot.convert_text(original)
     
     if original == new_content:
         print("ℹ️  页面无需修改")
@@ -104,9 +103,9 @@ def test_single_page(page_name, template_name, bot, dry_run=False):
         print("\n❌ 转换验证失败")
         return False
     
-    # 检查变量名转换
+    # 检查所有变量名转换
     print("\n📝 变量名转换检查:")
-    for traditional, simplified in list(VARIABLE_MAPPINGS.items())[:5]:
+    for traditional, simplified in VARIABLE_MAPPINGS.items():
         if f'|{traditional}' in original:
             if f'|{simplified}' in new_content and f'|{traditional}' not in new_content:
                 print(f"  ✓ {traditional} → {simplified}")
@@ -131,12 +130,14 @@ def test_single_page(page_name, template_name, bot, dry_run=False):
             print("\n👉 请到 Wiki 上检查页面确认无误后，再使用 --batch 模式")
             return True
         except Exception as e:
-            print(f"❌ 保存失败: {e}")
+            print(f"❌ 保存失败: {safe_error(e)}")
             return False
     
     return True
 
-def batch_convert(template_name, bot, dry_run=False, include_doc=True, test_first=True):
+
+def batch_convert(template_name: str, bot: FandomBot, dry_run: bool = False,
+                  include_doc: bool = True, test_first: bool = True) -> bool:
     """批量模式：转换所有使用模板的页面"""
     print(f"=== 批量转换模式 ===")
     print(f"模板: {template_name}\n")
@@ -144,9 +145,8 @@ def batch_convert(template_name, bot, dry_run=False, include_doc=True, test_firs
     if dry_run:
         print("🔍 预览模式 - 不会保存更改\n")
     
-    pages = list_template_pages(template_name, bot)
-    
-    all_pages = list(pages)
+    # list_template_pages 已返回 list，无需再次 list()
+    all_pages = list_template_pages(template_name, bot)
     if include_doc:
         doc_page = bot.get_page(f"{template_name}/doc")
         if doc_page.exists:
@@ -158,7 +158,7 @@ def batch_convert(template_name, bot, dry_run=False, include_doc=True, test_firs
         first_page = all_pages[0]
         
         original = first_page.text()
-        new_content = convert_page(original, bot)
+        new_content = bot.convert_text(original)
         
         if original != new_content:
             valid = verify_conversion(original, new_content, first_page.name)
@@ -186,7 +186,7 @@ def batch_convert(template_name, bot, dry_run=False, include_doc=True, test_firs
         
         try:
             original = page.text()
-            new_content = convert_page(original, bot)
+            new_content = bot.convert_text(original)
             
             if original == new_content:
                 print("  - 无需修改")
@@ -210,7 +210,7 @@ def batch_convert(template_name, bot, dry_run=False, include_doc=True, test_firs
                     time.sleep(1)
                     
         except Exception as e:
-            print(f"  ⚠️  失败: {e}")
+            print(f"  ⚠️  失败: {safe_error(e)}")
             failed += 1
             
             if 'ratelimited' in str(e).lower():
@@ -227,6 +227,7 @@ def batch_convert(template_name, bot, dry_run=False, include_doc=True, test_firs
         print("\n💡 确认无误后，运行不带 --dry-run 的命令进行实际转换")
     
     return failed == 0
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -275,7 +276,7 @@ def main():
         bot = FandomBot()
         print(f"✓ 已登录: {bot.site.username}\n")
     except Exception as e:
-        print(f"❌ 登录失败: {e}")
+        print(f"❌ 登录失败: {safe_error(e)}")
         sys.exit(1)
     
     if args.list:

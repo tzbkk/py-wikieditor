@@ -12,9 +12,9 @@ import os
 import argparse
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from fandom_bot import FandomBot
+from fandom_bot import FandomBot, safe_error
 
-def test_connection(bot, page_name='STARS'):
+def test_connection(bot: FandomBot, page_name: str = 'STARS') -> None:
     """测试连接"""
     print(f"✓ 已登录: {bot.site.username}")
     
@@ -23,7 +23,7 @@ def test_connection(bot, page_name='STARS'):
     print(f"是否存在: {page.exists}")
     print(f"\n页面内容:\n{page.text()}")
 
-def get_template_info(bot, template_name='Template:音樂信息'):
+def get_template_info(bot: FandomBot, template_name: str = 'Template:音樂信息') -> None:
     """获取模板信息"""
     template_page = bot.get_page(template_name)
     print(f"模板页面: {template_page.name}")
@@ -36,15 +36,17 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 子命令:
-  page      转换单个或多个页面
-  category  转换分类下的所有页面
-  template  转换使用模板的所有页面
-  restore   从历史版本恢复页面
-  scan      扫描所有 main 命名空间页面并交互式转换
-  scan-category  扫描所有 category 命名空间页面并交互式转换
-  move-category  移动 category 页面（先更新链接，再移动页面）
-  test      测试连接
-  info      获取模板/页面信息
+  page            转换单个或多个页面
+  category        转换分类下的所有页面
+  template        转换使用模板的所有页面
+  restore         从历史版本恢复页面
+  scan            扫描所有 main 命名空间页面并交互式转换
+  scan-category   扫描所有 category 命名空间页面并交互式转换
+  move-category   移动 category 页面（先更新链接，再移动页面）
+  fix-links       批量修复链接为简体版本
+  update-cat-refs 批量更新分类引用为简体中文
+  test            测试连接
+  info            获取模板/页面信息
   
 快速开始:
   # 1. 测试连接
@@ -151,19 +153,22 @@ def main():
         parser.print_help()
         sys.exit(1)
     
-    # 初始化 bot（对于所有命令）
-    try:
-        bot = FandomBot()
-    except Exception as e:
-        print(f"❌ 登录失败: {e}")
-        sys.exit(1)
-    
-    # test 和 info 命令直接执行
+    # test 和 info 命令需要 bot，其他命令由子脚本自行创建
     if args.command == 'test':
+        try:
+            bot = FandomBot()
+        except Exception as e:
+            print(f"❌ 登录失败: {safe_error(e)}")
+            sys.exit(1)
         test_connection(bot, args.page or 'STARS')
         sys.exit(0)
     
     if args.command == 'info':
+        try:
+            bot = FandomBot()
+        except Exception as e:
+            print(f"❌ 登录失败: {safe_error(e)}")
+            sys.exit(1)
         get_template_info(bot, args.template or 'Template:音樂信息')
         sys.exit(0)
     

@@ -1,5 +1,7 @@
 # 代码简化和解耦总结
 
+**注意：本文档中提到的部分脚本（convert_cat_page.py, convert_cat_ending.py, convert_seasons.py）已在后续重构中删除。这些脚本的功能已整合到其他脚本中。**
+
 ## 主要改进
 
 ### 1. 识别的重复功能

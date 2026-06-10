@@ -20,12 +20,11 @@ bot = FandomBot(config_file="config.json")
 
 #### 主要方法
 
-##### convert_text(text, skip_images=True)
+##### convert_text(text)
 将文本从繁体转换为简体中文。
 
 - **参数**:
   - `text`: 要转换的文本
-  - `skip_images`: 是否跳过图片字段（默认 True）
 - **返回**: 转换后的文本
 
 ```python

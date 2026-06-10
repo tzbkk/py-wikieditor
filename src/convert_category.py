@@ -9,26 +9,25 @@ Fandom Wiki 分类转换工具
 
 import sys
 import os
-import re
 import argparse
 import time
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from fandom_bot import FandomBot, protect_filenames, restore_filenames, verify_filenames_preserved
+from typing import List, Optional, Any
 
-def convert_page(text, bot):
-    """转换单个页面的文本"""
-    text, protected = protect_filenames(text)
-    text = bot.cc.convert(text)
-    text = restore_filenames(text, protected)
-    return text
+from fandom_bot import FandomBot, verify_filenames_preserved, safe_error
 
-def verify_conversion(original, new_content):
+
+def verify_conversion(original: str, new_content: str, page_name: str) -> bool:
     """验证转换结果"""
-    valid, _ = verify_filenames_preserved(original, new_content)
+    valid, errors = verify_filenames_preserved(original, new_content)
+    if not valid:
+        print(f"  ⚠️  {page_name} 文件名验证未通过: {errors}")
     return valid
 
-def list_category_pages(category_name, bot, limit=None):
+
+def list_category_pages(category_name: str, bot: FandomBot,
+                        limit: Optional[int] = None) -> List[Any]:
     """列出分类下的所有页面"""
     print(f"📋 获取 Category:{category_name} 的页面...")
     pages = list(bot.get_category_members(category_name))
@@ -39,7 +38,9 @@ def list_category_pages(category_name, bot, limit=None):
     print(f"找到 {len(pages)} 个页面\n")
     return pages
 
-def convert_category(category_name, bot, dry_run=False, limit=None, test_first=True):
+
+def convert_category(category_name: str, bot: FandomBot, dry_run: bool = False,
+                     limit: Optional[int] = None, test_first: bool = True) -> bool:
     """转换分类下的所有页面"""
     print(f"=== 转换分类 ===")
     print(f"分类: Category:{category_name}\n")
@@ -57,10 +58,10 @@ def convert_category(category_name, bot, dry_run=False, limit=None, test_first=T
         print(f"📄 测试: {first_page.name}")
         
         original = first_page.text()
-        new_content = convert_page(original, bot)
+        new_content = bot.convert_text(original)
         
         if original != new_content:
-            valid = verify_conversion(original, new_content)
+            valid = verify_conversion(original, new_content, first_page.name)
             
             if not valid:
                 print("❌ 测试失败：文件名验证未通过")
@@ -88,14 +89,14 @@ def convert_category(category_name, bot, dry_run=False, limit=None, test_first=T
         
         try:
             original = page.text()
-            new_content = convert_page(original, bot)
+            new_content = bot.convert_text(original)
             
             if original == new_content:
                 print("  - 无需修改")
                 skipped += 1
                 continue
             
-            if not verify_conversion(original, new_content):
+            if not verify_conversion(original, new_content, page.name):
                 print("  ⚠️  验证失败，跳过")
                 failed += 1
                 continue
@@ -112,7 +113,7 @@ def convert_category(category_name, bot, dry_run=False, limit=None, test_first=T
                     time.sleep(1)
                     
         except Exception as e:
-            print(f"  ⚠️  失败: {e}")
+            print(f"  ⚠️  失败: {safe_error(e)}")
             failed += 1
             
             if 'ratelimited' in str(e).lower():
@@ -127,7 +128,9 @@ def convert_category(category_name, bot, dry_run=False, limit=None, test_first=T
     
     return failed == 0
 
-def convert_category_page(category_name, bot, dry_run=False):
+
+def convert_category_page(category_name: str, bot: FandomBot,
+                          dry_run: bool = False) -> bool:
     """转换单个分类页面"""
     new_name = bot.cc.convert(category_name)
     
@@ -165,10 +168,11 @@ def convert_category_page(category_name, bot, dry_run=False):
                 bot.move_page(cat, f"Category:{new_name}", reason="改名为简体中文")
                 print(f"  ✓ 已移动到 Category:{new_name}")
             except Exception as e:
-                print(f"  ⚠️  移动失败: {e}")
+                print(f"  ⚠️  移动失败: {safe_error(e)}")
                 return False
     
     return True
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -214,7 +218,7 @@ def main():
         bot = FandomBot()
         print(f"✓ 已登录: {bot.site.username}\n")
     except Exception as e:
-        print(f"❌ 登录失败: {e}")
+        print(f"❌ 登录失败: {safe_error(e)}")
         sys.exit(1)
     
     if args.page:

@@ -18,6 +18,8 @@ python src/fandom.py <command> [options]
 - `template` - 转换使用模板的所有页面
 - `restore` - 从历史版本恢复页面
 - `scan` - 扫描所有 main 命名空间页面并交互式转换
+- `scan-category` - 扫描所有 category 命名空间页面并交互式转换
+- `move-category` - 移动 category 页面（先更新链接，再移动页面）
 - `test` - 测试连接
 - `info` - 获取模板/页面信息
 - `fix-links` - 批量修复链接为简体版本
@@ -224,6 +226,8 @@ src/
 ├── convert_template.py            # 模板转换
 ├── restore_from_history.py        # 恢复页面
 ├── scan_and_convert.py           # 扫描转换
+├── scan_category.py              # 扫描分类
+├── move_category.py              # 移动分类
 ├── move_pages.py                  # 移动页面
 ├── fix_links.py                   # 修复链接
 ├── update_cat_refs.py             # 更新分类引用

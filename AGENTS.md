@@ -39,6 +39,8 @@ python src/convert_category.py "分类名"
 python src/convert_template.py "Template:模板名"
 python src/restore_from_history.py "页面名"
 python src/scan_and_convert.py
+python src/scan_category.py
+python src/move_category.py "旧分类名" "新分类名"
 python src/move_pages.py "页面名"
 python src/fix_links.py "舊文本" "新文本"
 python src/update_cat_refs.py "分类名"

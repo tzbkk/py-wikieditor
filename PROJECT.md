@@ -23,6 +23,8 @@ src/ (工具层)
     ├── convert_template.py
     ├── restore_from_history.py
     ├── scan_and_convert.py
+    ├── scan_category.py
+    ├── move_category.py
     ├── move_pages.py
     ├── fix_links.py
     ├── update_cat_refs.py
@@ -148,6 +150,33 @@ python src/fandom.py update-cat-refs "片頭曲" "片尾曲"
 
 # 从文件批量更新
 python src/fandom.py update-cat-refs --from-file categories.txt
+```
+
+### 场景 8: 扫描分类页面
+
+扫描所有 category 命名空间页面并交互式转换：
+
+```bash
+# 仅扫描
+python src/fandom.py scan-category --scan-only
+
+# 扫描并转换（限制数量）
+python src/fandom.py scan-category --limit 5 --approve-all
+```
+
+### 场景 9: 移动分类页面
+
+移动 category 页面（先更新链接，再移动页面）：
+
+```bash
+# 移动单个分类
+python src/fandom.py move-category "舊分類名" "新分類名"
+
+# 从文件批量移动
+python src/fandom.py move-category --from-file categories_to_move.txt
+
+# 预览移动
+python src/fandom.py move-category "舊分類名" "新分類名" --dry-run
 ```
 
 ## 扩展性

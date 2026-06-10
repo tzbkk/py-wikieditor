@@ -220,6 +220,8 @@ python src/fandom.py update-cat-refs --from-file categories.txt
 | 转换分类 | `python src/fandom.py category "分类名"` |
 | 转换模板 | `python src/fandom.py template "Template:模板名" --batch` |
 | 扫描转换 | `python src/fandom.py scan --limit 5 --approve-all` |
+| 扫描分类 | `python src/fandom.py scan-category --limit 5 --approve-all` |
+| 移动分类 | `python src/fandom.py move-category "旧分类名" "新分类名"` |
 | 修复链接 | `python src/fandom.py fix-links "舊文本" "新文本"` |
 | 更新分类引用 | `python src/fandom.py update-cat-refs "分类名"` |
 | 移动页面 | `python src/move_pages.py "舊頁面名"` |

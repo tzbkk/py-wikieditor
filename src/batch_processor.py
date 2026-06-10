@@ -5,14 +5,25 @@
 提供批量处理页面时的通用功能，减少代码重复
 """
 import time
-from typing import List, Callable, Dict, Tuple, Any
-from fandom_bot import FandomBot
+import argparse
+import sys
+from typing import List, Callable, Dict, Tuple, Optional
+
+from fandom_bot import FandomBot, safe_error
 
 
 class BatchProcessor:
-    """批处理器类，提供通用的批量处理功能"""
+    """批处理器类，提供通用的批量页面处理功能"""
     
-    def __init__(self, bot: FandomBot, dry_run: bool = False, delay: float = 0.5):
+    def __init__(self, bot: FandomBot, dry_run: bool = False, delay: float = 0.5) -> None:
+        """
+        初始化批处理器
+        
+        Args:
+            bot: FandomBot 实例
+            dry_run: 是否为预览模式
+            delay: 每次处理之间的延迟秒数
+        """
         self.bot = bot
         self.dry_run = dry_run
         self.delay = delay
@@ -20,8 +31,8 @@ class BatchProcessor:
         self.failed = 0
         self.skipped = 0
     
-    def process_pages(self, pages: List[str], processor: Callable, 
-                      title: str = "批量处理", show_progress: bool = True):
+    def process_pages(self, pages: List[str], processor: Callable[[str, FandomBot], Tuple[Optional[bool], str]],
+                      title: str = "批量处理", show_progress: bool = True) -> bool:
         """
         批量处理页面
         
@@ -34,7 +45,7 @@ class BatchProcessor:
             show_progress: 是否显示进度
         
         Returns:
-            bool: 是否全部成功
+            是否全部成功
         """
         if show_progress:
             print(f"=== {title} ===")
@@ -65,22 +76,36 @@ class BatchProcessor:
                     time.sleep(self.delay)
                     
             except Exception as e:
-                error_msg = f"失败: {e}"
-                if show_progress:
-                    print(f"  ⚠️  {error_msg}")
-                self.failed += 1
-                
                 if 'ratelimited' in str(e).lower():
                     if show_progress:
-                        print("  ⏳ 遇到速率限制，等待 60 秒...")
+                        print("  ⏳ 遇到速率限制，等待 60 秒后重试...")
                     time.sleep(60)
+                    try:
+                        result, message = processor(page_name, self.bot)
+                        if show_progress:
+                            print(f"  {message}")
+                        if result is None:
+                            self.skipped += 1
+                        elif result:
+                            self.converted += 1
+                        else:
+                            self.failed += 1
+                    except Exception as e2:
+                        if show_progress:
+                            print(f"  ⚠️  重试失败: {safe_error(e2)}")
+                        self.failed += 1
+                    continue
+                
+                if show_progress:
+                    print(f"  ⚠️  失败: {safe_error(e)}")
+                self.failed += 1
         
         if show_progress:
             self.print_statistics()
         
         return self.failed == 0
     
-    def print_statistics(self, extra_stats: Dict[str, int] = None):
+    def print_statistics(self, extra_stats: Optional[Dict[str, int]] = None) -> None:
         """
         打印统计信息
         
@@ -113,10 +138,10 @@ def read_page_list(file_path: str) -> List[str]:
             pages = [line.strip() for line in f if line.strip() and not line.startswith('#')]
         return pages
     except Exception as e:
-        raise Exception(f"读取文件失败: {e}")
+        raise Exception(f"读取文件失败: {e}") from e
 
 
-def create_batch_parser(description: str, epilog: str = None):
+def create_batch_parser(description: str, epilog: Optional[str] = None) -> argparse.ArgumentParser:
     """
     创建标准的批处理命令行解析器
     
@@ -127,8 +152,6 @@ def create_batch_parser(description: str, epilog: str = None):
     Returns:
         argparse.ArgumentParser
     """
-    import argparse
-    
     if epilog is None:
         epilog = """
 示例:
@@ -150,7 +173,7 @@ def create_batch_parser(description: str, epilog: str = None):
     return parser
 
 
-def parse_page_args(parser):
+def parse_page_args(parser: argparse.ArgumentParser) -> Tuple[argparse.Namespace, Optional[List[str]], bool]:
     """
     解析页面参数（命令行或文件）
     
@@ -158,11 +181,9 @@ def parse_page_args(parser):
         parser: argparse.ArgumentParser
     
     Returns:
-        tuple: (args, page_names, should_exit)
-               如果 should_exit 为 True，表示应该退出程序
+        (args, page_names, should_exit)
+        如果 should_exit 为 True，表示应该退出程序
     """
-    import sys
-    
     args = parser.parse_args()
     
     if not args.pages and not args.from_file:

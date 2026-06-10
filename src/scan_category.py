@@ -11,20 +11,20 @@
 
 import sys
 import os
+import argparse
+from typing import List, Optional, Tuple
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from fandom_bot import FandomBot, protect_filenames, restore_filenames, verify_filenames_preserved
+from fandom_bot import FandomBot, protect_filenames, restore_filenames, verify_filenames_preserved, safe_error
 
 
 def needs_conversion(text: str, bot: FandomBot) -> bool:
-    """检测文本是否需要转换"""
-    text, protected = protect_filenames(text)
-    converted = bot.cc.convert(text)
-    restore_filenames(converted, protected)
-    return text != converted
+    """检查页面是否需要转换"""
+    return bot.convert_text(text) != text
 
 
-def show_changes_preview(original: str, new_content: str, page_name: str, max_lines: int = 20):
+def show_changes_preview(original: str, new_content: str, page_name: str, max_lines: int = 20) -> None:
     """显示更改预览"""
     lines_orig = original.split('\n')
     lines_new = new_content.split('\n')
@@ -47,11 +47,11 @@ def show_changes_preview(original: str, new_content: str, page_name: str, max_li
         print(f"     新: {new[:100]}{'...' if len(new) > 100 else ''}")
 
 
-def scan_category_namespace(bot: FandomBot, limit: int = None):
+def scan_category_namespace(bot: FandomBot, limit: Optional[int] = None) -> List[str]:
     """扫描所有 category 命名空间的页面"""
     print("🔍 扫描 category 命名空间页面...\n")
     
-    pages_to_convert = []
+    pages_to_convert: List[str] = []
     count = 0
     
     try:
@@ -59,13 +59,10 @@ def scan_category_namespace(bot: FandomBot, limit: int = None):
             count += 1
             
             try:
-                if hasattr(page, 'text'):
-                    original = page.text()
-                else:
-                    continue
+                original = page.text()
                 
                 if needs_conversion(original, bot):
-                    pages_to_convert.append((page.name, original))
+                    pages_to_convert.append(page.name)
                     print(f"✓ 发现可转换页面: {page.name}")
                 else:
                     print(f"  - 跳过: {page.name} (无需转换)")
@@ -77,10 +74,7 @@ def scan_category_namespace(bot: FandomBot, limit: int = None):
                     print(f"   已扫描 {count} 个页面...")
             
             except Exception as e:
-                if hasattr(page, 'name'):
-                    print(f"  ⚠️  处理 {page.name} 时出错: {e}")
-                else:
-                    print(f"  ⚠️  处理页面时出错: {e}")
+                print(f"  ⚠️  处理 {page.name} 时出错: {safe_error(e)}")
                 continue
         
         print(f"\n📊 扫描完成:")
@@ -90,22 +84,22 @@ def scan_category_namespace(bot: FandomBot, limit: int = None):
         return pages_to_convert
     
     except Exception as e:
-        print(f"❌ 扫描失败: {e}")
+        print(f"❌ 扫描失败: {safe_error(e)}")
         return []
 
 
-def interactive_convert(pages_data: list, bot: FandomBot, approve_all: bool = False):
+def interactive_convert(page_names: List[str], bot: FandomBot, approve_all: bool = False) -> Tuple[int, int, int]:
     """交互式转换：逐个询问是否保存"""
     print(f"\n🎯 开始{'自动' if approve_all else '交互式'}转换")
-    print(f"共 {len(pages_data)} 个页面需要处理\n")
+    print(f"共 {len(page_names)} 个页面需要处理\n")
     
     approved = 0
     skipped = 0
     failed = 0
     
-    for i, (page_name, original) in enumerate(pages_data, 1):
+    for i, page_name in enumerate(page_names, 1):
         print(f"\n{'='*60}")
-        print(f"[{i}/{len(pages_data)}] 处理: {page_name}")
+        print(f"[{i}/{len(page_names)}] 处理: {page_name}")
         
         try:
             page = bot.get_page(page_name)
@@ -114,9 +108,8 @@ def interactive_convert(pages_data: list, bot: FandomBot, approve_all: bool = Fa
                 skipped += 1
                 continue
             
-            text, protected = protect_filenames(original)
-            converted_text = bot.cc.convert(text)
-            new_content = restore_filenames(converted_text, protected)
+            original = page.text()
+            new_content = bot.convert_text(original)
             
             if original == new_content:
                 print("ℹ️  页面无需修改，跳过")
@@ -144,7 +137,7 @@ def interactive_convert(pages_data: list, bot: FandomBot, approve_all: bool = Fa
                     print("✅ 页面已保存（自动批准）")
                     approved += 1
                 except Exception as e:
-                    print(f"❌ 保存失败: {e}")
+                    print(f"❌ 保存失败: {safe_error(e)}")
                     failed += 1
                 continue
             
@@ -159,7 +152,7 @@ def interactive_convert(pages_data: list, bot: FandomBot, approve_all: bool = Fa
                             print("✅ 页面已保存")
                             approved += 1
                         except Exception as e:
-                            print(f"❌ 保存失败: {e}")
+                            print(f"❌ 保存失败: {safe_error(e)}")
                             failed += 1
                         break
                     
@@ -170,20 +163,19 @@ def interactive_convert(pages_data: list, bot: FandomBot, approve_all: bool = Fa
                     
                     elif response == 'a':
                         # 批准剩余所有页面
-                        print(f"📋 将批准剩余 {len(pages_data) - i} 个页面...")
-                        remaining = pages_data[i:]
-                        for pn, orig in remaining:
+                        print(f"📋 将批准剩余 {len(page_names) - i} 个页面...")
+                        remaining = page_names[i:]
+                        for pn in remaining:
                             try:
                                 p = bot.get_page(pn)
                                 if p.exists:
-                                    t, prot = protect_filenames(orig)
-                                    conv = bot.cc.convert(t)
-                                    nc = restore_filenames(conv, prot)
+                                    orig = p.text()
+                                    nc = bot.convert_text(orig)
                                     bot.edit_page(p, nc, summary="转换为简体中文")
                                     approved += 1
                                     print(f"  ✓ {pn}")
                             except Exception as e:
-                                print(f"  ✗ {pn}: {e}")
+                                print(f"  ✗ {pn}: {safe_error(e)}")
                                 failed += 1
                         print(f"\n✅ 批量转换完成")
                         return approved, skipped, failed
@@ -200,7 +192,7 @@ def interactive_convert(pages_data: list, bot: FandomBot, approve_all: bool = Fa
                 return approved, skipped, failed
         
         except Exception as e:
-            print(f"❌ 处理页面时出错: {e}")
+            print(f"❌ 处理页面时出错: {safe_error(e)}")
             failed += 1
     
     print(f"\n{'='*60}")
@@ -212,9 +204,8 @@ def interactive_convert(pages_data: list, bot: FandomBot, approve_all: bool = Fa
     return approved, skipped, failed
 
 
-def main():
-    import argparse
-    
+def main() -> None:
+    """主函数"""
     parser = argparse.ArgumentParser(
         description='扫描并转换所有 category 命名空间页面',
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -250,7 +241,7 @@ def main():
         bot = FandomBot()
         print(f"✓ 已登录: {bot.site.username}\n")
     except Exception as e:
-        print(f"❌ 登录失败: {e}")
+        print(f"❌ 登录失败: {safe_error(e)}")
         sys.exit(1)
     
     # 扫描 category 命名空间

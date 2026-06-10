@@ -79,6 +79,8 @@ python src/fandom.py <command> [options]
 | `template` | 转换使用模板的所有页面 |
 | `restore` | 从历史版本恢复页面 |
 | `scan` | 扫描所有 main 命名空间页面并交互式转换 |
+| `scan-category` | 扫描所有 category 命名空间页面并交互式转换 |
+| `move-category` | 移动 category 页面（先更新链接，再移动页面） |
 | `test` | 测试连接 |
 | `info` | 获取模板/页面信息 |
 | `fix-links` | 批量修复链接为简体版本 |
@@ -103,6 +105,12 @@ python src/restore_from_history.py "页面名" [选项]
 
 # 扫描转换
 python src/scan_and_convert.py [选项]
+
+# 扫描分类
+python src/scan_category.py [选项]
+
+# 移动分类
+python src/move_category.py "旧分类名" [选项]
 
 # 移动页面
 python src/move_pages.py "页面名" [选项]
@@ -205,7 +213,22 @@ python src/move_pages.py "舊頁面名" --dry-run
 python src/move_pages.py "舊頁面名"
 ```
 
-### 场景 12：恢复页面
+### 场景 12：扫描并转换分类页面
+
+```bash
+python src/fandom.py scan-category --scan-only
+python src/fandom.py scan-category --limit 5 --approve-all
+```
+
+### 场景 13：移动分类页面
+
+```bash
+python src/fandom.py move-category "舊分類名" "新分類名" --dry-run
+python src/fandom.py move-category "舊分類名" "新分類名"
+python src/fandom.py move-category --from-file categories_to_move.txt
+```
+
+### 场景 14：恢复页面
 
 ```bash
 python src/fandom.py restore "页面名" --show-versions
@@ -230,6 +253,8 @@ python src/fandom.py restore "页面名"
 │   ├── convert_template.py  # 模板转换
 │   ├── restore_from_history.py  # 恢复页面
 │   ├── scan_and_convert.py    # 扫描转换
+│   ├── scan_category.py        # 扫描分类
+│   ├── move_category.py        # 移动分类
 │   ├── move_pages.py     # 移动页面
 │   ├── fix_links.py      # 修复链接
 │   ├── update_cat_refs.py     # 更新分类引用
@@ -248,6 +273,15 @@ FANDOM_USERNAME=YourBot@BotName
 FANDOM_PASSWORD=your_bot_password
 CONVERSION_MODE=t2s
 ```
+
+### 数据文件
+
+项目提供示例文件来展示批量操作的格式：
+
+- `pages.txt.example` - 页面列表格式，每行一个页面名称（以 `#` 开头的行会被忽略）
+- `categories_to_move.txt` - 分类移动列表格式，每行包含旧名称和新名称
+
+使用 `--from-file` 参数时可以参考这些示例文件。
 
 ### 获取 Bot 密码
 

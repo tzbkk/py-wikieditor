@@ -207,11 +207,11 @@ class FandomBot:
                 f"不安全的域名配置 '{domain}'，僅允許 HTTPS 連線。"
                 "请移除 'http://' 前綴，直接提供域名（如 example.fandom.com）。"
             )
+        if domain.startswith('https://'):
+            domain = domain[len('https://'):]
+        domain = domain.rstrip('/')
 
-        self.site = mwclient.Site(
-            self.config['site']['domain'],
-            path=self.config['site']['path']
-        )
+        self.site = mwclient.Site(domain, path=self.config['site']['path'])
         self.site.login(
             self.config['auth']['username'],
             self.config['auth']['password']

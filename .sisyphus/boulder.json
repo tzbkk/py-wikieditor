@@ -1,0 +1,85 @@
+{
+  "active_plan": "/home/hxue/projets/py-wikieditor/.sisyphus/plans/pi-config-hardening.md",
+  "started_at": "2026-07-22T15:51:52.517Z",
+  "session_ids": [
+    "ses_075c87654ffer6eRVyfACmkJ4G",
+    "ses_0750f7d3cffeCfGXr0lI1KYULU",
+    "ses_0750f6242ffe9lfPpB79MP4cYM",
+    "ses_0750f40e0ffeU6ZmTB7GwtI26e",
+    "ses_0750f23c8ffewZM6eqmYjYn4zS"
+  ],
+  "session_origins": {
+    "ses_075c87654ffer6eRVyfACmkJ4G": "direct",
+    "ses_0750f7d3cffeCfGXr0lI1KYULU": "appended",
+    "ses_0750f6242ffe9lfPpB79MP4cYM": "appended",
+    "ses_0750f40e0ffeU6ZmTB7GwtI26e": "appended",
+    "ses_0750f23c8ffewZM6eqmYjYn4zS": "appended"
+  },
+  "plan_name": "pi-config-hardening",
+  "agent": "atlas",
+  "task_sessions": {
+    "todo:1": {
+      "task_key": "todo:1",
+      "task_label": "1",
+      "task_title": "**FandomBot 补全方法 + edit_page 限流重试**",
+      "session_id": "ses_07576949dffeFf5bFJRx3RBOxG",
+      "agent": "Sisyphus-Junior",
+      "category": "deep",
+      "updated_at": "2026-07-22T15:58:26.544Z"
+    },
+    "todo:6": {
+      "task_key": "todo:6",
+      "task_label": "6",
+      "task_title": "**wiki_bot_server.py 完整实现**",
+      "session_id": "ses_075604a89ffe8NVbPb2Bf5gki3",
+      "agent": "Sisyphus-Junior",
+      "category": "deep",
+      "updated_at": "2026-07-22T16:22:14.777Z"
+    },
+    "todo:7": {
+      "task_key": "todo:7",
+      "task_label": "7",
+      "task_title": "**抽取 inline Python 到 wiki_tools/ + 重写 wiki-tools.ts 4 个工具走 server**",
+      "session_id": "ses_07556fe75ffekQqdmP71MknR02",
+      "agent": "Sisyphus-Junior",
+      "category": "deep",
+      "updated_at": "2026-07-22T16:36:29.306Z"
+    },
+    "todo:9": {
+      "task_key": "todo:9",
+      "task_label": "9",
+      "task_title": "**实现 6 个 safe/bounded slash commands**",
+      "session_id": "ses_075399fbfffeGFIKHHno6CnzJj",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-07-22T17:06:08.530Z"
+    },
+    "todo:10": {
+      "task_key": "todo:10",
+      "task_label": "10",
+      "task_title": "**实现 destructive slash commands (fix-links/update-cat-refs/save_page confirm 流程)**",
+      "session_id": "ses_07533b371ffe3nU1O8AkSKIV0n",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-07-22T17:12:49.132Z"
+    },
+    "todo:13": {
+      "task_key": "todo:13",
+      "task_label": "13",
+      "task_title": "**permission gate + slash command 集成测试**",
+      "session_id": "ses_0752dccffffebk45nY0fJ0sixc",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-07-22T17:21:05.810Z"
+    },
+    "final-wave:f1": {
+      "task_key": "final-wave:f1",
+      "task_label": "F1",
+      "task_title": "**Plan Compliance Audit** — `oracle`",
+      "session_id": "ses_0750f23c8ffewZM6eqmYjYn4zS",
+      "agent": "Sisyphus-Junior",
+      "category": "deep",
+      "updated_at": "2026-07-22T17:54:20.060Z"
+    }
+  }
+}

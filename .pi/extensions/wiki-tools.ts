@@ -44,9 +44,6 @@ async function ensureServer(pi: ExtensionAPI): Promise<void> {
     stdio: ["pipe", "pipe", "pipe"],
     cwd: process.cwd(),
   });
-  serverProc.stderr?.on("data", (data) => {
-    pi.exec("echo", [data.toString()]).catch(() => {});
-  });
   serverProc.on("exit", () => {
     serverProc = null;
     serverReady = false;

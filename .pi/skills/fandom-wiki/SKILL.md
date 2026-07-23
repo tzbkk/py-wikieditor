@@ -1,6 +1,6 @@
 ---
 name: fandom-wiki
-description: Fandom Wiki 页面拼接工作流。用户描述要生成的一类页面，Pi 从 Wiki 已有内容中提取数据、按模板拼接页面草稿，展示给用户审核并补充缺失字段，确认后上传到 Wiki。
+description: Fandom Wiki 页面拼接工作流。批量生成同类页面草稿，审核后上传。仅读单页用 wiki_read_page 或 cat wiki_dump/。
 ---
 
 # Fandom Wiki 页面拼接工作流
@@ -10,6 +10,14 @@ description: Fandom Wiki 页面拼接工作流。用户描述要生成的一类�
 这是一个 Fandom Wiki（擅长捉弄的高木同学 wiki）的自动化工具。Wiki 上已有 567 个页面（main 338 + Template 212 + Category 17），全部已下载到 `wiki_dump/` 目录。
 
 **核心能力**：根据用户描述，从 Wiki 已有页面中提取数据，按模板拼接出新页面。
+
+## 何时不用此技能
+
+- **只想读单个页面** → 用 `wiki_read_page` 工具或 bash `cat wiki_dump/<page>.wiki`
+- **要做繁简批量转换** → 用 slash commands `/wiki_convert_page`、`/wiki_convert_category` 等
+- **要扫描分类页面** → 用 `/wiki_scan_category`
+- **要批量修复链接** → 用 `/wiki_fix_links`
+- **要更新分类引用** → 用 `/wiki_update_cat_refs`
 
 ## Wiki 数据结构
 
@@ -168,7 +176,7 @@ __待填__
 - 填写 `__待填__` 字段
 - 可以一次填多个页面，也可以分批
 
-用户说"上传"/"确认"/"可以了"后，使用 `wiki_save_page` 逐页上传。
+用户说"上传"/"确认"/"可以了"后，使用 `wiki_save_page` 逐页上传（工具会弹出确认对话框，需再次确认）。
 
 **上传前必须确认**：
 1. 用户已明确说"上传"、"确认"、"可以了"等
@@ -181,7 +189,7 @@ __待填__
 2. **永远不要覆盖已有页面** — 生成前检查 `index.json` 确认页面不存在
 3. **不要猜测你不确定的数据** — 宁可标 `__待填__` 也不要填错误内容
 4. **导航模板是权威数据源** — 页面列表、分卷关系以导航模板为准
-5. **禁止修改 .env / config.json** — Extension 层已自动拦截
+5. **禁止修改 .env / config.json / credentials** — Extension 层 permission gate 自动拦截 edit/write/bash 三类工具的敏感路径访问
 
 ## 数据提取技巧
 
@@ -228,7 +236,7 @@ __待填__
 
 - 章节图片：观察已有同类页面的图片命名规律（如 `Doyobi_{N}.jpg`）
 - en 链接：观察已有同类页面（如 `[[en:Ashita wa Doyōbi {N}]]`）
-- 文件存在性：可用 `wiki_check_file` 工具验证图片文件是否已上传
+- 文件存在性：可用 `wiki_check_files` 工具验证图片文件是否已上传
 
 ## 常见页面类型速查
 
@@ -249,6 +257,28 @@ __待填__
 - 导航：`{{卷导航}}`
 - 数据源：ISBN、日期等外部信息
 - 典型结构：模板 → 简介 → 台版封面图 → 导航 → en链接 → Category
+
+## Slash Command 索引
+
+| 命令 | 用途 | 默认行为 | 破坏性？ |
+|------|------|---------|---------|
+| `/wiki_test` | 测试 Wiki 连接 | 直接执行 | 否 |
+| `/wiki_info [name]` | 查看模板/页面信息 | 直接执行 | 否 |
+| `/wiki_convert_page page_name="..."` | 转换单页 | dry-run | 加 `--confirm` 才真改 |
+| `/wiki_convert_category category="..."` | 转换分类下页面 | dry-run | 加 `--confirm` 才真改 |
+| `/wiki_convert_template template="..."` | 转换模板引用页 | dry-run | 加 `--confirm` 才真改 |
+| `/wiki_restore page_name="..."` | 从历史恢复 | 仅列版本 | 加 `--confirm` 才恢复 |
+| `/wiki_scan [--limit N]` | 扫描待转换页面 | scan-only | 否 |
+| `/wiki_scan_category` | 扫描分类命名空间 | scan-only | 否 |
+| `/wiki_fix_links old_text="..." new_text="..."` | 批量修复链接 | dry-run | 加 `--confirm` 才真改 |
+| `/wiki_update_cat_refs [categories...]` | 更新分类引用 | dry-run | 加 `--confirm` 才真改 |
+
+### 不可用的命令（用 bash 手动执行）
+
+| 操作 | Bash 命令 | 原因 |
+|------|----------|------|
+| 批量扫描转换 | `python src/fandom.py scan --approve-all` | blast radius 过大 |
+| 移动分类 | `python src/fandom.py move-category "旧" "新"` | 影响范围大 |
 
 ## 代码库结构（仅当用户要求改代码时参考）
 

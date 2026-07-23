@@ -1,3 +1,5 @@
 mwclient
 opencc
 python-dotenv
+pytest>=7.0
+pytest-mock>=3.0

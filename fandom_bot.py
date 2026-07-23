@@ -10,7 +10,9 @@ from opencc import OpenCC
 import json
 import re
 import os
-from typing import Dict, List, Tuple
+import threading
+import time
+from typing import Dict, List, Optional, Tuple
 
 _has_dotenv = False
 _load_dotenv_func = None
@@ -64,6 +66,13 @@ _RE_CODE_BLOCK = re.compile(
     r'(<(?:source|syntaxhighlight|code|pre|nowiki)(?:\s[^>]*)?>)(.*?)(</(?:source|syntaxhighlight|code|pre|nowiki)>)',
     re.DOTALL | re.IGNORECASE,
 )
+
+
+# ---------------------------------------------------------------------------
+# FandomBot 單例狀態 — 用於 get_bot() classmethod
+# ---------------------------------------------------------------------------
+_BOT_INSTANCE: "Optional[FandomBot]" = None
+_BOT_LOCK = threading.Lock()
 
 
 def safe_error(e: Exception) -> str:
@@ -187,6 +196,21 @@ class FandomBot:
     支援從 .env 環境變數或 config.json 檔案載入設定。
     """
 
+    @classmethod
+    def get_bot(cls) -> "FandomBot":
+        """取得全域共享的 FandomBot 單例（執行緒安全，雙重檢查鎖定）。
+
+        初始化失敗時不會快取結果，下次呼叫會重新嘗試。
+        """
+        global _BOT_INSTANCE
+        if _BOT_INSTANCE is not None:
+            return _BOT_INSTANCE
+        with _BOT_LOCK:
+            if _BOT_INSTANCE is not None:
+                return _BOT_INSTANCE
+            _BOT_INSTANCE = cls()  # 若拋出例外，_BOT_INSTANCE 保持 None，不會被快取
+            return _BOT_INSTANCE
+
     def __init__(self, config_file: str = "config.json"):
         if _has_dotenv and os.path.exists('.env'):
             assert _load_dotenv_func is not None
@@ -301,8 +325,25 @@ class FandomBot:
         return list(self.site.pages[template_name].embeddedin())
 
     def edit_page(self, page, content: str, summary: str = "自动编辑") -> None:
-        """編輯頁面，寫入新內容"""
-        page.edit(content, summary=summary)
+        """編輯頁面，寫入新內容。
+
+        遇到速率限制 (ratelimited) 時自動重試，最多嘗試 3 次，
+        每次重試間隔 60 秒。其他類型的例外立即向上拋出。
+        """
+        for attempt in range(3):
+            try:
+                page.edit(content, summary=summary)
+                return
+            except Exception as e:
+                if 'ratelimited' in str(e).lower() and attempt < 2:
+                    time.sleep(60)
+                    continue
+                raise
+
+    def edit_page_by_name(self, title: str, content: str, summary: str = "自动编辑") -> None:
+        """依頁面名稱編輯頁面，為 edit_page(get_page(title), ...) 的便利封裝。"""
+        page = self.get_page(title)
+        self.edit_page(page, content, summary)
 
     def move_page(self, page, new_name: str, reason: str = "页面移动", no_redirect: bool = True) -> None:
         """移動頁面到新名稱"""
@@ -311,3 +352,29 @@ class FandomBot:
     def get_subpages(self, prefix: str) -> List[object]:
         """取得指定前綴的所有子頁面"""
         return list(self.site.allpages(prefix=prefix + '/'))
+
+    def check_exists(self, page_names: List[str]) -> Dict[str, bool]:
+        """批次檢查多個頁面是否存在。回傳 {頁面名: 是否存在} 映射。"""
+        result: Dict[str, bool] = {}
+        for name in page_names:
+            result[name] = bool(self.site.pages[name].exists)
+        return result
+
+    def read_page_text(self, page_name: str) -> Optional[str]:
+        """讀取頁面純文字內容；若頁面不存在則回傳 None。"""
+        page = self.site.pages[page_name]
+        if not page.exists:
+            return None
+        return page.text()
+
+    def check_files_exist(self, filenames: List[str]) -> Dict[str, bool]:
+        """批次檢查 File: 命名空間下的檔案是否存在。
+
+        檔名若未以 'File:' 開頭，會自動加上該前綴再查詢，
+        回傳的字典鍵保持呼叫者原本傳入的形式（未正規化）。
+        """
+        result: Dict[str, bool] = {}
+        for filename in filenames:
+            lookup = filename if filename.lower().startswith('file:') else f'File:{filename}'
+            result[filename] = bool(self.site.pages[lookup].exists)
+        return result

@@ -32,19 +32,6 @@ const SENSITIVE_PATH_PATTERNS: RegExp[] = [
   /\/\.ssh\//, // .ssh directory
 ];
 
-async function run(
-  pi: ExtensionAPI,
-  args: string[]
-): Promise<{ ok: boolean; output: string }> {
-  try {
-    const result = await pi.exec(PYTHON, args);
-    const output = (result.stdout || "") + (result.stderr || "");
-    return { ok: result.code === 0 && !result.killed, output: output.trim() };
-  } catch (e: any) {
-    return { ok: false, output: String(e.message || e) };
-  }
-}
-
 // ============================================================
 // IPC Server 生命周期管理 — 持久化的 wiki_bot_server.py 子进程
 // ============================================================

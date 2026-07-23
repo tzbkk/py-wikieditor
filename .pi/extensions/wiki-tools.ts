@@ -70,7 +70,7 @@ async function callServer(
           const resp = JSON.parse(lines[0]);
           if (resp.ok) resolve(resp.result);
           else reject(new Error(resp.error || "Server error"));
-        } catch (e: any) {
+        } catch {
           reject(new Error(`Invalid server response: ${lines[0]}`));
         }
       }
@@ -170,12 +170,13 @@ export default function (pi: ExtensionAPI) {
           ],
           details: result,
         };
-      } catch (e: any) {
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
         return {
           content: [
-            { type: "text" as const, text: `❌ 保存失败: ${e.message}` },
+            { type: "text" as const, text: `❌ 保存失败: ${msg}` },
           ],
-          details: { title: params.title, ok: false, error: e.message },
+          details: { title: params.title, ok: false, error: msg },
         };
       }
     },
@@ -206,9 +207,10 @@ export default function (pi: ExtensionAPI) {
           ],
           details: result,
         };
-      } catch (e: any) {
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
         return {
-          content: [{ type: "text" as const, text: `❌ ${e.message}` }],
+          content: [{ type: "text" as const, text: `❌ ${msg}` }],
           details: {},
         };
       }
@@ -240,9 +242,10 @@ export default function (pi: ExtensionAPI) {
           ],
           details: result,
         };
-      } catch (e: any) {
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
         return {
-          content: [{ type: "text" as const, text: `❌ ${e.message}` }],
+          content: [{ type: "text" as const, text: `❌ ${msg}` }],
           details: {},
         };
       }
@@ -277,9 +280,10 @@ export default function (pi: ExtensionAPI) {
           ],
           details: { title: params.title, found: text !== null },
         };
-      } catch (e: any) {
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
         return {
-          content: [{ type: "text" as const, text: `❌ ${e.message}` }],
+          content: [{ type: "text" as const, text: `❌ ${msg}` }],
           details: {},
         };
       }
@@ -720,8 +724,9 @@ export default function (pi: ExtensionAPI) {
     try {
       await ensureServer(pi);
       ctx.ui.notify("Fandom Wiki 工具集已加载 (IPC server 已启动)", "info");
-    } catch (e: any) {
-      ctx.ui.notify(`⚠️ Wiki IPC server 启动失败: ${e.message}`, "warning");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      ctx.ui.notify(`⚠️ Wiki IPC server 启动失败: ${msg}`, "warning");
     }
   });
 

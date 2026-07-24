@@ -32,5 +32,8 @@ node_modules/
 .DS_Store
 Thumbs.db
 
+# Sisyphus 工作目录
+.sisyphus/
+
 # 日志
 *.log

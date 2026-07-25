@@ -500,8 +500,15 @@ def export_via_special(site, ns_id: int, output_path: str,
 def _find_max_revid_in_xml(path: str) -> int:
     """流式扫描已写好的 XML dump,返回最大的 <revision><id> 值。
 
-    用行级状态机避免加载整个文件到内存。区分 <page><id> 与 <revision><id>
-    靠 in_revision 状态(进入 <revision> 后才算)。
+    用行级状态机避免加载整个文件到内存。需区分三种 <id>:
+      - <page><id>           (page id,跳过)
+      - <revision><id>       (revision id,要的就是它)
+      - <revision><contributor><id>  (user id,跳过 —— 远大于 revid,
+                                      会污染 max)
+
+    靠 in_revision + in_contributor 双状态:revid 必须在 revision 内但
+    contributor 外。同时处理 contributor 单行(<contributor>\\n...</contributor>)
+    与同行(<contributor><ip>x</ip></contributor>)两种格式。
     """
     max_id = 0
     if not os.path.exists(path):
@@ -509,15 +516,28 @@ def _find_max_revid_in_xml(path: str) -> int:
     try:
         with open(path, 'r', encoding='utf-8') as f:
             in_revision = False
+            in_contributor = False
             for line in f:
                 stripped = line.strip()
                 if stripped == '<revision>':
                     in_revision = True
+                    in_contributor = False
                     continue
                 if stripped == '</revision>':
                     in_revision = False
+                    in_contributor = False
                     continue
-                if (in_revision and stripped.startswith('<id>')
+                if stripped.startswith('<contributor'):
+                    in_contributor = True
+                    # 同行开闭(如 anon: <contributor><ip>x</ip></contributor>)
+                    if '</contributor>' in stripped:
+                        in_contributor = False
+                    continue
+                if stripped == '</contributor>':
+                    in_contributor = False
+                    continue
+                if (in_revision and not in_contributor
+                        and stripped.startswith('<id>')
                         and stripped.endswith('</id>')):
                     inner = stripped[4:-5]
                     try:

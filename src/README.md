@@ -1,200 +1,54 @@
 # src/ 目录说明
 
-这是项目的主要工具目录，包含所有 Wiki 操作工具。
+这是项目的主要工具目录，包含所有 Wiki 操作工具。每个工具有独立的详细文档，见 [doc/tools/](../doc/tools/)。
 
-## 主要工具
+## 统一入口
 
-### 统一入口（推荐）⭐
-
-**fandom.py** - 统一的命令行工具，提供所有转换功能
+**[fandom.py](fandom.py)** - 统一命令行入口，封装所有子工具。详见 [doc/tools/fandom.md](../doc/tools/fandom.md)。
 
 ```bash
 python src/fandom.py <command> [options]
 ```
 
-**命令：**
-- `page` - 转换单个或多个页面
-- `category` - 转换分类下的所有页面
-- `template` - 转换使用模板的所有页面
-- `restore` - 从历史版本恢复页面
-- `scan` - 扫描所有 main 命名空间页面并交互式转换
-- `scan-category` - 扫描所有 category 命名空间页面并交互式转换
-- `move-category` - 移动 category 页面（先更新链接，再移动页面）
-- `test` - 测试连接
-- `info` - 获取模板/页面信息
-- `fix-links` - 批量修复链接为简体版本
-- `update-cat-refs` - 批量更新分类引用为简体中文
+子命令（共 13 个）：`page`、`category`、`template`、`restore`、`scan`、`scan-category`、`move-category`、`fix-links`、`update-cat-refs`、`dump-xml`、`dump-wiki`、`test`、`info`。
 
-### 页面转换
+## 独立工具一览
 
-**convert_page.py** - 转换单个或多个页面
+按用途分类，每个工具的详细文档在 [doc/tools/](../doc/tools/) 下。
 
-```bash
-python src/convert_page.py "页面名" [选项]
-```
+### 📥 数据导出 / 备份（只读）
 
-**选项：**
-- `--dry-run` - 预览模式
-- `--show-diff` - 显示修改详情
-- `--from-file FILE` - 从文件读取页面列表
-- `--search KEYWORD` - 搜索包含关键词的页面
-- `--filter PATTERN` - 额外过滤模式
-- `--list` - 只列出页面（搜索模式）
-- `--with-subpages` - 同时转换子页面
+| 脚本 | 功能 | 文档 |
+|------|------|------|
+| [dump_xml.py](dump_xml.py) | MediaWiki XML dump 格式（双模式 api\|special） | [doc/tools/dump_xml.md](../doc/tools/dump_xml.md) |
+| [dump_wiki.py](dump_wiki.py) | wikitext 文本 dump（.wiki 文件） | [doc/tools/dump_wiki.md](../doc/tools/dump_wiki.md) |
+| [scan_redlinks.py](scan_redlinks.py) | 扫描红链（指向不存在页面的链接） | [doc/tools/scan_redlinks.md](../doc/tools/scan_redlinks.md) |
 
-### 分类转换
+### 🔄 繁简转换
 
-**convert_category.py** - 转换分类下的所有页面
+| 脚本 | 功能 | 文档 |
+|------|------|------|
+| [convert_page.py](convert_page.py) | 通用页面转换 | [doc/tools/convert_page.md](../doc/tools/convert_page.md) |
+| [convert_category.py](convert_category.py) | 分类下页面转换 | [doc/tools/convert_category.md](../doc/tools/convert_category.md) |
+| [convert_template.py](convert_template.py) | 模板嵌入页面转换 | [doc/tools/convert_template.md](../doc/tools/convert_template.md) |
+| [scan_and_convert.py](scan_and_convert.py) | 扫描 main 命名空间并交互转换 | [doc/tools/scan_and_convert.md](../doc/tools/scan_and_convert.md) |
+| [scan_category.py](scan_category.py) | 扫描 category 命名空间并交互转换 | [doc/tools/scan_category.md](../doc/tools/scan_category.md) |
 
-```bash
-python src/convert_category.py "分类名" [选项]
-```
+### 🚚 页面移动 / 链接修复
 
-**选项：**
-- `--list` - 只列出页面
-- `--dry-run` - 预览模式
-- `--limit N` - 限制转换数量
-- `--no-test-first` - 跳过测试
-- `--page NAME` - 转换单个分类页面本身（含移动）
+| 脚本 | 功能 | 文档 |
+|------|------|------|
+| [move_pages.py](move_pages.py) | 批量移动/重命名页面 | [doc/tools/move_pages.md](../doc/tools/move_pages.md) |
+| [move_category.py](move_category.py) | 移动 category 页面（先更新引用） | [doc/tools/move_category.md](../doc/tools/move_category.md) |
+| [fix_links.py](fix_links.py) | 批量修复链接为简体 | [doc/tools/fix_links.md](../doc/tools/fix_links.md) |
+| [update_cat_refs.py](update_cat_refs.py) | 批量更新分类引用 | [doc/tools/update_cat_refs.md](../doc/tools/update_cat_refs.md) |
 
-### 模板转换
+### 🛠️ 恢复 / 辅助
 
-**convert_template.py** - 转换使用模板的所有页面
-
-```bash
-python src/convert_template.py "Template:模板名" [选项]
-```
-
-**选项：**
-- `--list` - 只列出页面
-- `--test PAGE` - 测试单个页面
-- `--batch` - 批量转换
-- `--dry-run` - 预览模式
-- `--no-doc` - 不转换 /doc
-
-### 页面恢复
-
-**restore_from_history.py** - 从历史版本恢复页面
-
-```bash
-python src/restore_from_history.py "页面名" [选项]
-```
-
-**选项：**
-- `--show-versions` - 显示历史版本
-
-### 扫描转换
-
-**scan_and_convert.py** - 扫描所有 main 命名空间页面并交互式转换
-
-```bash
-python src/scan_and_convert.py [选项]
-```
-
-**选项：**
-- `--limit N` - 限制处理的页面数量
-- `--scan-only` - 仅扫描，不进行转换
-- `--approve-all` - 自动批准所有修改（非交互式）
-
-### 页面移动
-
-**move_pages.py** - 批量移动/重命名页面
-
-```bash
-python src/move_pages.py "页面1" "页面2" ...
-```
-
-**选项：**
-- `--from-file FILE` - 从文件读取页面列表
-- `--dry-run` - 预览模式
-
-### 链接修复
-
-**fix_links.py** - 批量修复链接为简体版本
-
-```bash
-python src/fix_links.py "舊文本" "新文本" [选项]
-```
-
-**选项：**
-- `--limit N` - 限制处理的页面数量
-- `--dry-run` - 预览模式
-
-### 分类引用更新
-
-**update_cat_refs.py** - 批量更新分类引用为简体中文
-
-```bash
-python src/update_cat_refs.py "分类名" [选项]
-```
-
-**选项：**
-- `--from-file FILE` - 从文件读取分类列表
-- `--dry-run` - 预览模式
-
-## 辅助模块
-
-### batch_processor.py
-
-批处理工具模块，提供通用的批量处理功能。
-
-主要功能：
-- `BatchProcessor` 类 - 批量处理页面
-- `read_page_list()` - 从文件读取页面列表
-- `create_batch_parser()` - 创建标准的批处理命令行解析器
-- `parse_page_args()` - 解析页面参数
-
-## 使用建议
-
-### 日常使用
-
-对于日常的繁简转换任务，推荐使用统一入口：
-
-```bash
-# 测试连接
-python src/fandom.py test
-
-# 转换页面
-python src/fandom.py page "页面名"
-
-# 转换分类
-python src/fandom.py category "分类名"
-
-# 转换模板
-python src/fandom.py template "Template:模板名" --batch
-```
-
-### 快速测试
-
-```bash
-# 测试连接
-python src/fandom.py test
-
-# 预览转换
-python src/fandom.py page "页面名" --dry-run
-
-# 获取模板信息
-python src/fandom.py info "Template:模板名"
-```
-
-### 批量操作
-
-```bash
-# 从文件批量转换
-python src/fandom.py page --from-file pages.txt
-
-# 转换分类（限制数量）
-python src/fandom.py category "分类名" --limit 10
-
-# 扫描并转换
-python src/fandom.py scan --limit 5 --approve-all
-
-# 修复链接
-python src/fandom.py fix-links "舊文本" "新文本"
-
-# 更新分类引用
-python src/fandom.py update-cat-refs --from-file categories.txt
-```
+| 脚本 | 功能 | 文档 |
+|------|------|------|
+| [restore_from_history.py](restore_from_history.py) | 从历史版本恢复页面 | [doc/tools/restore_from_history.md](../doc/tools/restore_from_history.md) |
+| [batch_processor.py](batch_processor.py) | 批处理工具模块（辅助） | [doc/tools/batch_processor.md](../doc/tools/batch_processor.md) |
 
 ## 核心特性
 
@@ -220,23 +74,27 @@ python src/fandom.py update-cat-refs --from-file categories.txt
 
 ```
 src/
-├── fandom.py                      # 统一入口 ⭐
-├── convert_page.py                # 页面转换
-├── convert_category.py            # 分类转换
-├── convert_template.py            # 模板转换
-├── restore_from_history.py        # 恢复页面
-├── scan_and_convert.py           # 扫描转换
-├── scan_category.py              # 扫描分类
-├── move_category.py              # 移动分类
-├── move_pages.py                  # 移动页面
-├── fix_links.py                   # 修复链接
-├── update_cat_refs.py             # 更新分类引用
-├── batch_processor.py             # 批处理工具模块
-└── README.md                      # 本文档
+├── fandom.py                    # 统一入口 ⭐
+├── dump_xml.py                  # XML dump（双模式）
+├── dump_wiki.py                 # wikitext 文本 dump
+├── scan_redlinks.py             # 红链扫描
+├── convert_page.py              # 页面转换
+├── convert_category.py          # 分类转换
+├── convert_template.py          # 模板转换
+├── restore_from_history.py      # 恢复页面
+├── scan_and_convert.py          # 扫描 main 命名空间
+├── scan_category.py             # 扫描 category 命名空间
+├── move_category.py             # 移动分类
+├── move_pages.py                # 移动页面
+├── fix_links.py                 # 修复链接
+├── update_cat_refs.py           # 更新分类引用
+├── batch_processor.py           # 批处理工具模块
+└── README.md                    # 本文档
 ```
 
 ## 更多信息
 
 - [主文档](../README.md)
-- [项目概览](../PROJECT.md)
+- [工具详细文档](../doc/tools/)
+- [项目概览](../doc/PROJECT.md)
 - [Agent 指南](../AGENTS.md)

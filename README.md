@@ -64,6 +64,27 @@ python src/fandom.py update-cat-refs "片頭曲" --dry-run
 
 ## 工具集
 
+### 工具一览
+
+| 脚本 | 功能 | 模式 |
+|------|------|------|
+| [fandom.py](src/fandom.py) | 统一入口 | ⭐ 推荐 |
+| [dump_xml.py](src/dump_xml.py) | XML dump（双模式） | 只读 |
+| [dump_wiki.py](src/dump_wiki.py) | wikitext 文本 dump | 只读 |
+| [scan_redlinks.py](src/scan_redlinks.py) | 扫描红链 | 只读 |
+| [convert_page.py](src/convert_page.py) | 页面转换 | 修改 Wiki |
+| [convert_category.py](src/convert_category.py) | 分类下转换 | 修改 Wiki |
+| [convert_template.py](src/convert_template.py) | 模板嵌入转换 | 修改 Wiki |
+| [scan_and_convert.py](src/scan_and_convert.py) | 扫描 main 交互转换 | 修改 Wiki |
+| [scan_category.py](src/scan_category.py) | 扫描 category 交互转换 | 修改 Wiki |
+| [move_pages.py](src/move_pages.py) | 移动页面 | 修改 Wiki |
+| [move_category.py](src/move_category.py) | 移动分类（先更新引用） | 修改 Wiki |
+| [fix_links.py](src/fix_links.py) | 修复链接 | 修改 Wiki |
+| [update_cat_refs.py](src/update_cat_refs.py) | 更新分类引用 | 修改 Wiki |
+| [restore_from_history.py](src/restore_from_history.py) | 历史版本恢复 | 修改 Wiki |
+
+详见 [src/README.md](src/README.md) 和 [doc/tools/](doc/tools/)。
+
 ### 统一入口（推荐）
 
 ```bash
@@ -258,6 +279,9 @@ python src/fandom.py restore "页面名"
 │   ├── move_pages.py     # 移动页面
 │   ├── fix_links.py      # 修复链接
 │   ├── update_cat_refs.py     # 更新分类引用
+│   ├── dump_xml.py       # XML dump（双模式）
+│   ├── dump_wiki.py      # wikitext 文本 dump
+│   ├── scan_redlinks.py  # 扫描红链
 │   └── batch_processor.py      # 批处理工具模块
 └── doc/                  # 文档
 ```

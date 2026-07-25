@@ -45,6 +45,8 @@ def main():
   move-category   移动 category 页面（先更新链接，再移动页面）
   fix-links       批量修复链接为简体版本
   update-cat-refs 批量更新分类引用为简体中文
+  dump-xml        下载 Wiki 为 MediaWiki XML dump 格式(双模式)
+  dump-wiki       下载 Wiki 页面为 wikitext 文本(.wiki 文件)
   test            测试连接
   info            获取模板/页面信息
   
@@ -146,7 +148,25 @@ def main():
     move_cat_parser.add_argument('new_name', nargs='?', help='新分类名称（不含 Category: 前缀）')
     move_cat_parser.add_argument('--from-file', metavar='FILE', help='从文件读取分类列表')
     move_cat_parser.add_argument('--dry-run', action='store_true', help='预览模式')
-    
+
+    # dump-xml 子命令
+    dump_xml_parser = subparsers.add_parser('dump-xml', help='下载 Wiki 为 MediaWiki XML dump 格式')
+    dump_xml_parser.add_argument('--ns', type=int, nargs='+', help='命名空间 ID 列表')
+    dump_xml_parser.add_argument('--mode', choices=['api', 'special'], default='api', help='导出模式: api=快速仅当前版本; special=支持完整 history(默认 api)')
+    dump_xml_parser.add_argument('--history', action='store_true', help='包含完整 revision history(仅 --mode special 有效)')
+    dump_xml_parser.add_argument('--list-only', action='store_true', help='只列出页面,不下载')
+    dump_xml_parser.add_argument('--skip-existing', action='store_true', help='跳过已存在且非空的 XML 文件(断点续传)')
+    dump_xml_parser.add_argument('--dump-dir', default='wiki_dump_xml', help='输出目录(默认: wiki_dump_xml)')
+    dump_xml_parser.add_argument('--delay', type=float, default=1.0, help='请求间延迟秒数,默认 1.0(Fandom 速率限制)')
+    dump_xml_parser.add_argument('--schema', default='0.11', help='XML dump schema 版本(仅 api 模式,默认 0.11)')
+
+    # dump-wiki 子命令
+    dump_wiki_parser = subparsers.add_parser('dump-wiki', help='下载 Wiki 页面为 wikitext 文本(.wiki 文件)')
+    dump_wiki_parser.add_argument('--ns', type=int, nargs='+', help='指定命名空间 ID（默认下载内容命名空间）')
+    dump_wiki_parser.add_argument('--list-only', action='store_true', help='只列出页面标题，不下载内容')
+    dump_wiki_parser.add_argument('--skip-existing', action='store_true', help='跳过已存在且非空的本地文件（断点续传）')
+    dump_wiki_parser.add_argument('--dump-dir', default='wiki_dump', help='输出目录（默认 wiki_dump/）')
+
     args = parser.parse_args()
     
     if not args.command:
@@ -291,6 +311,40 @@ def main():
         if args.dry_run:
             sys.argv.append('--dry-run')
         update_cat_refs.main()
+
+    elif args.command == 'dump-xml':
+        import dump_xml
+        sys.argv = ['dump_xml.py']
+        if args.ns:
+            sys.argv.extend(['--ns'] + [str(n) for n in args.ns])
+        if args.mode != 'api':
+            sys.argv.extend(['--mode', args.mode])
+        if args.history:
+            sys.argv.append('--history')
+        if args.list_only:
+            sys.argv.append('--list-only')
+        if args.skip_existing:
+            sys.argv.append('--skip-existing')
+        if args.dump_dir != 'wiki_dump_xml':
+            sys.argv.extend(['--dump-dir', args.dump_dir])
+        if args.delay != 1.0:
+            sys.argv.extend(['--delay', str(args.delay)])
+        if args.schema != '0.11':
+            sys.argv.extend(['--schema', args.schema])
+        dump_xml.main()
+
+    elif args.command == 'dump-wiki':
+        import dump_wiki
+        sys.argv = ['dump_wiki.py']
+        if args.ns:
+            sys.argv.extend(['--ns'] + [str(n) for n in args.ns])
+        if args.list_only:
+            sys.argv.append('--list-only')
+        if args.skip_existing:
+            sys.argv.append('--skip-existing')
+        if args.dump_dir and args.dump_dir != 'wiki_dump':
+            sys.argv.extend(['--dump-dir', args.dump_dir])
+        dump_wiki.main()
 
 if __name__ == "__main__":
     main()

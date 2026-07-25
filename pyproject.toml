@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "py-wikieditor"
+version = "1.0.0"
+description = "Fandom Wiki 自动化工具"
+requires-python = ">=3.8"
+dependencies = [
+    "mwclient",
+    "opencc",
+    "python-dotenv",
+]
+
+[tool.setuptools]
+py-modules = ["fandom_bot"]
+packages = ["src"]
